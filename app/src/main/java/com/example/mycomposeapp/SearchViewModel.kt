@@ -20,4 +20,10 @@ class SearchViewModel : ViewModel() {
             it.contains(query, ignoreCase = true)
         }
     }
+
+    fun findExactMatch(query: String): String? {
+        return _suggestions.value.find {
+            it.equals(query, ignoreCase = true)
+        }
+    }
 }

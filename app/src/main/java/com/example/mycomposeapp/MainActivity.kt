@@ -62,7 +62,15 @@ fun SearchScreen(
         if (showBottomSheet) {
             SearchBottomSheet(
                 searchText = searchText,
-                onSearchTextChange = { searchText = it },
+                onSearchTextChange = { newText -> 
+                    searchText = newText
+                    // Check for exact match and auto-select
+                    viewModel.findExactMatch(newText)?.let { match ->
+                        selectedText = match
+                        showBottomSheet = false
+                        searchText = ""
+                    }
+                },
                 suggestions = viewModel.getSuggestions(searchText),
                 onSuggestionSelected = { suggestion ->
                     selectedText = suggestion
