@@ -11,11 +11,12 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchBottomSheet(
+fun <T> SearchBottomSheet(
     searchText: String,
     onSearchTextChange: (String) -> Unit,
-    suggestions: List<String>,
-    onSuggestionSelected: (String) -> Unit,
+    suggestions: List<T>,
+    createSuggestionView: @Composable (T) -> Unit,
+    onSuggestionSelected: (T) -> Unit,
     onDismiss: () -> Unit,
     showSearchBox: Boolean = true,
     modifier: Modifier = Modifier
@@ -41,18 +42,17 @@ fun SearchBottomSheet(
                 )
             }
             
-            // Suggestions list
+            // Suggestions list with custom view
             LazyColumn {
                 items(suggestions) { suggestion ->
-                    Text(
-                        text = suggestion,
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                onSuggestionSelected(suggestion)
-                            }
+                            .clickable { onSuggestionSelected(suggestion) }
                             .padding(vertical = 12.dp)
-                    )
+                    ) {
+                        createSuggestionView(suggestion)
+                    }
                 }
             }
         }

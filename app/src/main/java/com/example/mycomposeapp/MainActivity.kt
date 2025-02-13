@@ -58,9 +58,9 @@ fun SearchScreen(
             label = { Text("Click to search") }
         )
         
-        // Using the new SearchBottomSheet component
+        // Using the generic SearchBottomSheet component
         if (showBottomSheet) {
-            SearchBottomSheet(
+            SearchBottomSheet<String>(
                 searchText = searchText,
                 onSearchTextChange = { newText -> 
                     searchText = newText
@@ -72,6 +72,12 @@ fun SearchScreen(
                     }
                 },
                 suggestions = viewModel.getSuggestions(searchText),
+                createSuggestionView = { suggestion ->
+                    Text(
+                        text = suggestion,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
                 onSuggestionSelected = { suggestion ->
                     selectedText = suggestion
                     showBottomSheet = false
@@ -81,7 +87,7 @@ fun SearchScreen(
                     showBottomSheet = false
                     searchText = ""
                 },
-                showSearchBox = true // Can be configured as needed
+                showSearchBox = true
             )
         }
     }
