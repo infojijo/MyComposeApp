@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,15 @@ plugins {
 }
 
 android {
+    val canadaPostProperties = Properties().apply {
+        val propertiesFile = rootProject.file("app/canada_post.properties")
+        if (propertiesFile.exists()) {
+            propertiesFile.inputStream().use { load(it) }
+        } else {
+            setProperty("CANADA_POST_API_KEY", "TD13-NH59-ME48-EY95") // Default value for development
+        }
+    }
+
     namespace = "com.example.mycomposeapp"
     compileSdk = 35
 
@@ -16,6 +27,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "CANADA_POST_API_KEY",
+            "\"${canadaPostProperties.getProperty("CANADA_POST_API_KEY")}\""
+        )
     }
 
     buildTypes {
@@ -36,11 +53,20 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
+    // Networking
+    implementation("io.ktor:ktor-client-android:2.3.7")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-gson:2.3.7")
+    implementation("io.ktor:ktor-client-logging:2.3.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
     implementation("androidx.activity:activity-ktx:1.8.2")
 
     implementation(libs.androidx.core.ktx)

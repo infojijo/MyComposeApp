@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,12 +18,28 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.mycomposeapp.api.CanadaPostRepository
 import com.example.mycomposeapp.components.SearchBottomSheet
 import com.example.mycomposeapp.ui.theme.MyComposeAppTheme
 import com.example.mycomposeapp.utils.PhoneNumberFormatter
+import com.example.mycomposeapp.BuildConfig
+import com.example.mycomposeapp.data.Address
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: SearchViewModel by viewModels()
+    private val viewModel: SearchViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return SearchViewModel(
+                    repository = CanadaPostRepository(
+                        apiKey = BuildConfig.CANADA_POST_API_KEY
+                    )
+                ) as T
+            }
+        }
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,60 +63,18 @@ fun SearchScreen(
     viewModel: SearchViewModel,
     modifier: Modifier = Modifier
 ) {
-    var showBottomSheet by remember { mutableStateOf(false) }
-    var searchText by remember { mutableStateOf("") }
-    var selectedText by remember { mutableStateOf("") }
-    
     Column(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Phone number input field
         PhoneNumberInput()
-
-        // Main text field that triggers bottom sheet
-        OutlinedTextField(
-            value = selectedText,
-            onValueChange = { },
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showBottomSheet = true },
-            enabled = false,
-            label = { Text("Click to search") }
-        )
         
-        // Using the generic SearchBottomSheet component
-        if (showBottomSheet) {
-            SearchBottomSheet<String>(
-                searchText = searchText,
-                onSearchTextChange = { newText -> 
-                    searchText = newText
-                    // Check for exact match and auto-select
-                    viewModel.findExactMatch(newText)?.let { match ->
-                        selectedText = match
-                        showBottomSheet = false
-                        searchText = ""
-                    }
-                },
-                suggestions = viewModel.getSuggestions(searchText),
-                createSuggestionView = { suggestion ->
-                    Text(
-                        text = suggestion,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                },
-                onSuggestionSelected = { suggestion ->
-                    selectedText = suggestion
-                    showBottomSheet = false
-                    searchText = ""
-                },
-                onDismiss = {
-                    showBottomSheet = false
-                    searchText = ""
-                },
-                showSearchBox = true
-            )
-        }
+        // Direct address input field
+        AddressTextField(viewModel)
+        
+        // Address search with bottom sheet
+        AddressSearchWithBottomSheet(viewModel)
     }
 }
 
@@ -139,10 +115,146 @@ fun PhoneNumberInput(modifier: Modifier = Modifier) {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddressTextField(viewModel: SearchViewModel) {
+    var searchText by remember { mutableStateOf("") }
+    var selectedAddress by remember { mutableStateOf<Address?>(null) }
+    val suggestions by viewModel.addressSuggestions.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(
+            value = searchText,
+            onValueChange = { query ->
+                searchText = query
+                selectedAddress = null // Clear selected address when searching
+                viewModel.searchAddress(query)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Search Address") },
+            trailingIcon = {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
+            }
+        )
+        
+        // Show selected address in a read-only field
+        if (selectedAddress != null) {
+            OutlinedTextField(
+                value = selectedAddress.toString(),
+                onValueChange = { },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Complete Address") },
+                enabled = false
+            )
+        }
+        
+        // Show suggestions in a dropdown
+        if (suggestions.isNotEmpty()) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp),
+                shadowElevation = 4.dp
+            ) {
+                LazyColumn {
+                    items(suggestions) { address ->
+                        Text(
+                            text = address.toString(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    searchText = ""  // Clear search text
+                                    selectedAddress = address  // Set selected address
+                                    viewModel.clearAddressSuggestions()
+                                }
+                                .padding(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddressSearchWithBottomSheet(viewModel: SearchViewModel) {
+    var showBottomSheet by remember { mutableStateOf(false) }
+    var searchText by remember { mutableStateOf("") }
+    
+    val selectedAddress by viewModel.selectedAddress.collectAsStateWithLifecycle()
+    val suggestions by viewModel.addressSuggestions.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Search trigger field
+        OutlinedTextField(
+            value = "Click to search address",
+            onValueChange = { },
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showBottomSheet = true },
+            enabled = false,
+            label = { Text("Search Address") }
+        )
+        
+        // Show selected address in a read-only field
+        if (selectedAddress != null) {
+            OutlinedTextField(
+                value = selectedAddress.toString(),
+                onValueChange = { },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Complete Address") },
+                enabled = false
+            )
+        }
+        
+        if (showBottomSheet) {
+            SearchBottomSheet(
+                searchText = searchText,
+                onSearchTextChange = { query ->
+                    searchText = query
+                    viewModel.searchAddress(query)
+                },
+                suggestions = if (isLoading) emptyList() else suggestions,
+                createSuggestionView = { address ->
+                    Text(
+                        text = address.toString(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                onSuggestionSelected = { address ->
+                    viewModel.selectAddress(address)
+                    showBottomSheet = false
+                    searchText = ""
+                },
+                onDismiss = {
+                    showBottomSheet = false
+                    searchText = ""
+                }
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun SearchScreenPreview() {
     MyComposeAppTheme {
-        SearchScreen(viewModel = SearchViewModel())
+        SearchScreen(
+            viewModel = SearchViewModel(
+                repository = CanadaPostRepository("preview-key")
+            )
+        )
     }
 }
