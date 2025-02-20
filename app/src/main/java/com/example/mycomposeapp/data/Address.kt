@@ -5,14 +5,16 @@ data class Address(
     val city: String,
     val province: String,
     val postalCode: String,
-    val country: String = "Canada"
+    val country: String = "Canada",
+    val fullAddress: String
 ) {
     fun toShortString(): String {
-        return "$street, $city"
+        return "$fullAddress, $city"
     }
 
     fun toFullString(): String {
         return buildString {
+            append("$fullAddress ")
             append(street)
             if (city.isNotEmpty()) append(", $city")
             if (province.isNotEmpty()) append(", $province")

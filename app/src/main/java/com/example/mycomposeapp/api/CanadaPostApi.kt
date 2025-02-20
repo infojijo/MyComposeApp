@@ -28,12 +28,14 @@ data class AddressItem(
         val parts = description.split(",").map { it.trim() }
         return when (parts.size) {
             3 -> Address(
+                fullAddress = text,
                 street = parts[0],
                 city = parts[1],
                 province = parts[2].substringBefore(" "),
                 postalCode = parts[2].substringAfter(" ").trim()
             )
             else -> Address(
+                fullAddress = text,
                 street = text,
                 city = "",
                 province = "",

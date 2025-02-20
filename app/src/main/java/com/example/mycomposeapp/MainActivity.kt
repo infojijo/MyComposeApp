@@ -146,9 +146,9 @@ fun AddressTextField(viewModel: SearchViewModel) {
         )
         
         // Show selected address in a read-only field
-        if (selectedAddress != null) {
+        selectedAddress?.let { selected ->
             OutlinedTextField(
-                value = selectedAddress.toString(),
+                value = selected.toFullString(),
                 onValueChange = { },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Complete Address") },
@@ -166,8 +166,7 @@ fun AddressTextField(viewModel: SearchViewModel) {
             ) {
                 LazyColumn {
                     items(suggestions) { address ->
-                        Text(
-                            text = address.toString(),
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -176,7 +175,14 @@ fun AddressTextField(viewModel: SearchViewModel) {
                                     viewModel.clearAddressSuggestions()
                                 }
                                 .padding(16.dp)
-                        )
+                        ) {
+                            Text(text = address.toShortString())
+                            Text(
+                                text = address.toFullString(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -209,9 +215,9 @@ fun AddressSearchWithBottomSheet(viewModel: SearchViewModel) {
         )
         
         // Show selected address in a read-only field
-        if (selectedAddress != null) {
+        selectedAddress?.let { selected ->
             OutlinedTextField(
-                value = selectedAddress.toString(),
+                value = selected.toFullString(),
                 onValueChange = { },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Complete Address") },
@@ -228,10 +234,16 @@ fun AddressSearchWithBottomSheet(viewModel: SearchViewModel) {
                 },
                 suggestions = if (isLoading) emptyList() else suggestions,
                 createSuggestionView = { address ->
-                    Text(
-                        text = address.toString(),
+                    Column(
                         modifier = Modifier.fillMaxWidth()
-                    )
+                    ) {
+                        Text(text = address.toShortString())
+                        Text(
+                            text = address.toFullString(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 onSuggestionSelected = { address ->
                     viewModel.selectAddress(address)
